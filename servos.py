@@ -1,5 +1,6 @@
 from machine import Pin, PWM
 from math import radians, degrees
+from time import sleep
 
 class Servo:
     """
@@ -26,6 +27,9 @@ class Servo:
 
     - read(self, method: str = 'deg') -> int:
         Reads the current position of the servo in degrees ('deg'), radians ('rad'), or microseconds ('us').
+
+    - rotate(self, value: float, intervals: int= 0, time: int= 0, method: str= 'deg') -> None:
+        Rotate the servo towards the specified angle in small steps. The time between steps is in seconds.
 
     - off(self) -> None:
         Turns off the servo by setting the PWM duty cycle to 0.
@@ -118,6 +122,34 @@ class Servo:
 
     def __read_us(self) -> int:
         return self.__current_us
+
+    def rotate(self, value: float, intervals: int= 0, time: int= 0, method: str= 'deg') -> None:
+        """
+        Rotate the servo towards the specified angle in small steps.
+
+        Args:
+        - value (float): The target angle to rotate towards.
+        - intervals (int): The number of steps to reach the target angle. Default is 0 (immediate).
+        - time (int): The sleep time (in seconds) between each step. Default is 0 (no sleep).
+        - method (str): The unit of the target angle ('deg', 'rad', or 'us'). Default is 'deg'.
+        """
+        if intervals <= 0:
+            self.write(value, method)
+            return
+
+        old_value = self.read(method)
+        value_diff = abs(value-old_value)
+        interval = value_diff/intervals
+
+        if value < old_value:
+            interval*=-1
+
+        for _ in range(intervals-1):
+            new_value = self.read(method)+interval
+            self.write(new_value, method)
+            sleep(time)
+
+        self.write(value, method)
 
     def off(self) -> None:
         """Turns off the servo by setting the PWM duty cycle to 0."""
