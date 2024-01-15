@@ -12,7 +12,6 @@ class Stepper:
     - __direction: Direction of rotation (True for forward, False for backward)
     - __step_number: Current step the motor is on
     - __last_step_time: Timestamp in microseconds of when the last step was taken
-    - __pin_count: Number of pins in use
     - __step_delay: Delay between steps in microseconds, based on motor speed
     - __number_of_steps: Total number of steps the motor can take
     - __motor_pin_1 to __motor_pin_5: Pins used for controlling the motor phases
@@ -24,21 +23,39 @@ class Stepper:
     - __step_motor(this_step): Control the stepper motor to take a step based on the current step number
     """
 
+    __STEPS = {
+        2: [[0, 1],
+            [1, 1]],
+            
+        4: [[1, 0, 1, 0],
+            [0, 1, 1, 0],
+            [0, 1, 0, 1],
+            [1, 0, 0, 1]],
+
+        5: [[0, 1, 1, 0, 1],
+            [0, 1, 0, 0, 1],
+            [0, 1, 0, 1, 1],
+            [0, 1, 0, 1, 0],
+            [1, 1, 0, 1, 0],
+            [1, 0, 0, 1, 0],
+            [1, 0, 1, 1, 0],
+            [1, 0, 1, 0, 0],
+            [1, 0, 1, 0, 1],
+            [0, 0, 1, 0, 1]]
+    }
+
+    __steps: list[int] = None
+
     __direction: bool= False    # Direction of rotation
     __step_number: int= 0       # Which step the motor is on
     __last_step_time: int= 0    # Timestamp in us of when the last step was taken
-    __pin_count: int=  0        # How many pins are in use.
 
     __step_delay: int = 1       # Delay between steps, in us, based on speed
     __number_of_steps:int       # Total number of steps this motor can take
 
-    __motor_pin_1: int= 0
-    __motor_pin_2: int= 0
-    __motor_pin_3: int= 0
-    __motor_pin_4: int= 0
-    __motor_pin_5: int= 0         # Only 5 phase motor
+    __pins: list[Pin] = []
 
-    def __init__(self, number_of_steps: int, pin1: int, pin2: int, pin3: int= None, pin4: int= None, pin5: int= None) -> None:
+    def __init__(self, number_of_steps: int, pin1: int, pin2: int, pin3: int= None, pin4: int= None, pin5: int= None, steps: list[int] = None) -> None:
         """
         Initialize the Stepper object.
 
@@ -48,20 +65,17 @@ class Stepper:
         """
         self.__number_of_steps = number_of_steps
         if pin1 and pin2:
-            self.__motor_pin_1 = Pin(pin1, Pin.OUT)
-            self.__motor_pin_2 = Pin(pin2, Pin.OUT)
-            self.__pin_count = 2
+            self.__pins += [Pin(pin1, Pin.OUT), Pin(pin2, Pin.OUT)]
 
-            if pin3 and pin4: 
-                self.__motor_pin_3 = Pin(pin3, Pin.OUT)
-                self.__motor_pin_4 = Pin(pin4, Pin.OUT)
-                self.__pin_count = 4
+            if pin3 and pin4:
+                self.__pins += [Pin(pin3, Pin.OUT), Pin(pin4, Pin.OUT)]
 
                 if pin5: 
-                    self.__motor_pin_5 = Pin(pin5, Pin.OUT)
-                    self.__pin_count = 5
-
+                    self.__pins += [Pin(pin5, Pin.OUT)]
         
+        if steps: self.__steps = steps
+        else:
+            self.__steps = self.__STEPS[len(self.__pins)]
 
     def set_speed(self, value: int) -> None:
         """
@@ -100,11 +114,11 @@ class Stepper:
 
                 self.__step_number += 1 if self.__direction else -1
                 
-                print(self.__step_number % (10 if self.__pin_count == 5 else 4))
+                #print(self.__step_number % (10 if self.__pin_count == 5 else 4))
 
                 steps_left -= 1
 
-                self.__step_motor(self.__step_number % (10 if self.__pin_count == 5 else 4))
+                self.__step_motor(self.__step_number % len(self.__steps))
             
             else: sleep(self.__step_delay/1000000)
 
@@ -115,120 +129,10 @@ class Stepper:
         Parameters:
         - this_step: Current step number for motor control.
         """
+        step = self.__steps[this_step]
         
-        if this_step == 0:
-            if self.__pin_count == 2:           # 01
-                self.__motor_pin_1.value(0)
-                self.__motor_pin_2.value(1)
-
-            elif self.__pin_count == 4:         # 1010
-                self.__motor_pin_1.value(1)
-                self.__motor_pin_2.value(0)
-                self.__motor_pin_3.value(1)
-                self.__motor_pin_4.value(0)
-            
-            elif self.__pin_count == 5:         # 01101
-                self.__motor_pin_1.value(0)
-                self.__motor_pin_2.value(1)
-                self.__motor_pin_3.value(1)
-                self.__motor_pin_4.value(0)
-                self.__motor_pin_5.value(1)
-
-        elif this_step == 1:
-            if self.__pin_count == 2:           # 11
-                self.__motor_pin_1.value(1)
-                self.__motor_pin_2.value(1)
-
-            elif self.__pin_count == 4:         # 0110
-                self.__motor_pin_1.value(0)
-                self.__motor_pin_2.value(1)
-                self.__motor_pin_3.value(1)
-                self.__motor_pin_4.value(0)
-
-            elif self.__pin_count == 5:         # 01001
-                self.__motor_pin_1.value(0)
-                self.__motor_pin_2.value(1)
-                self.__motor_pin_3.value(0)
-                self.__motor_pin_4.value(0)
-                self.__motor_pin_5.value(1)
-
-        elif this_step == 2:
-            if self.__pin_count == 2:           # 10
-                self.__motor_pin_1.value(1)
-                self.__motor_pin_2.value(0)
-
-            elif self.__pin_count == 4:         # 0101
-                self.__motor_pin_1.value(0)
-                self.__motor_pin_2.value(1)
-                self.__motor_pin_3.value(0)
-                self.__motor_pin_4.value(1)
-
-            elif self.__pin_count == 5:         # 01011
-                self.__motor_pin_1.value(0)
-                self.__motor_pin_2.value(1)
-                self.__motor_pin_3.value(0)
-                self.__motor_pin_4.value(1)
-                self.__motor_pin_5.value(1)
-
-        elif this_step == 3:
-            if self.__pin_count == 2:           # 00
-                self.__motor_pin_1.value(0)
-                self.__motor_pin_2.value(0)
-
-            elif self.__pin_count == 4:         # 1001
-                self.__motor_pin_1.value(1)
-                self.__motor_pin_2.value(0)
-                self.__motor_pin_3.value(0)
-                self.__motor_pin_4.value(1)
-
-            elif self.__pin_count == 5:         # 01010
-                self.__motor_pin_1.value(0)
-                self.__motor_pin_2.value(1)
-                self.__motor_pin_3.value(0)
-                self.__motor_pin_4.value(1)
-                self.__motor_pin_5.value(0)
-
-        elif this_step == 4:                # 11010
-            self.__motor_pin_1.value(1)
-            self.__motor_pin_2.value(1)
-            self.__motor_pin_3.value(0)
-            self.__motor_pin_4.value(1)
-            self.__motor_pin_5.value(0)
-
-        elif this_step == 5:                # 10010
-            self.__motor_pin_1.value(1)
-            self.__motor_pin_2.value(0)
-            self.__motor_pin_3.value(0)
-            self.__motor_pin_4.value(1)
-            self.__motor_pin_5.value(0)
-
-        elif this_step == 6:                # 10110
-            self.__motor_pin_1.value(1)
-            self.__motor_pin_2.value(0)
-            self.__motor_pin_3.value(1)
-            self.__motor_pin_4.value(1)
-            self.__motor_pin_5.value(0)
-
-        elif this_step == 7:                # 10100
-            self.__motor_pin_1.value(1)
-            self.__motor_pin_2.value(0)
-            self.__motor_pin_3.value(1)
-            self.__motor_pin_4.value(0)
-            self.__motor_pin_5.value(0)
-
-        elif this_step == 8:                # 10101
-            self.__motor_pin_1.value(1)
-            self.__motor_pin_2.value(0)
-            self.__motor_pin_3.value(1)
-            self.__motor_pin_4.value(0)
-            self.__motor_pin_5.value(1)
-
-        elif this_step == 9:                # 00101
-            self.__motor_pin_1.value(0)
-            self.__motor_pin_2.value(0)
-            self.__motor_pin_3.value(1)
-            self.__motor_pin_4.value(0)
-            self.__motor_pin_5.value(1)
+        for i in range(len(step)):
+            self.__pins[i].value(step[i * (1 if self.__direction else -1)])
 
 class Stepper28BYJ48(Stepper):
     """
@@ -250,7 +154,6 @@ class Stepper28BYJ48(Stepper):
     - __direction: Direction of rotation (True for forward, False for backward)
     - __step_number: Current step the motor is on
     - __last_step_time: Timestamp in microseconds of when the last step was taken
-    - __pin_count: Number of pins in use
     - __step_delay: Delay between steps in microseconds, based on motor speed
     - __number_of_steps: Total number of steps the motor can take
     - __motor_pin_1 to __motor_pin_5: Pins used for controlling the motor phases
