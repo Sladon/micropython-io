@@ -234,6 +234,17 @@ class Stepper28BYJ48(Stepper):
     Stepper28BYJ48 class extends the Stepper class to specifically control a 28BYJ-48 stepper motor using 
     uln2003 driver board.
 
+    Connection between 28BYJ-48 Stepper Motor and ULN2003 Driver Board:
+    - Plug the stepper into the ULN2003
+
+    Connection between ESP-32 and ULN2003 Driver Board:
+    - Pin1 (IN1) on the ULN2003 connects to the GPIO pin controlling the first phase of the stepper motor.
+    - Pin2 (IN2) on the ULN2003 connects to the GPIO pin controlling the second phase of the stepper motor.
+    - Pin3 (IN3) on the ULN2003 connects to the GPIO pin controlling the third phase of the stepper motor.
+    - Pin4 (IN4) on the ULN2003 connects to the GPIO pin controlling the fourth phase of the stepper motor.
+    - VCC on the ULN2003 connects to the power supply (usually +5V).
+    - GND on the ULN2003 connects to the ground of the power supply.
+
     Attributes (inherited from Stepper):
     - __direction: Direction of rotation (True for forward, False for backward)
     - __step_number: Current step the motor is on
