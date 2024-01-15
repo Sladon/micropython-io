@@ -165,6 +165,8 @@ class Stepper28BYJ48v2(Stepper):
     - Pin4 (IN4) on the ULN2003 connects to the GPIO pin controlling the fourth phase of the stepper motor.
     - VCC on the ULN2003 connects to the power supply (usually +5V).
     - GND on the ULN2003 connects to the ground of the power supply.
+
+    - This version uses the steps from: https://components101.com/motors/28byj-48-stepper-motor
     """
 
     def __init__(self, pin1: int, pin2: int, pin3: int, pin4: int, number_of_steps: int = 4096, steps: list[int]= [
@@ -178,3 +180,15 @@ class Stepper28BYJ48v2(Stepper):
             [0, 1, 1, 0]
         ]) -> None:
         Stepper.__init__(self, number_of_steps, pin1, pin2, pin3, pin4, steps=steps)
+    
+    def __step_motor(self, this_step: int) -> None:
+        """
+        Control the stepper motor to take a step based on the current step number.
+
+        Parameters:
+        - this_step: Current step number for motor control.
+        """
+        step = self.__steps[this_step]
+        
+        for i in range(len(step)):
+            self.__pins[i].value(step[i])
