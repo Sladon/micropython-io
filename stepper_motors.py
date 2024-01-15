@@ -65,7 +65,7 @@ class Stepper:
 
     def set_speed(self, value: int) -> None:
         """
-        Set the speed of the stepper motor.
+        Sets the speed in revs per minute.
 
         Parameters:
         - value: Speed value, affecting the delay between steps.
@@ -92,14 +92,15 @@ class Stepper:
                 self.__last_step_time = now
 
                 # TODO: Fix direction
+                
+                if self.__step_number == self.__number_of_steps and self.__direction:
+                    self.__step_number = 0
+                elif self.__step_number == 0 and not self.__direction:
+                    self.__step_number = self.__number_of_steps
 
                 self.__step_number += 1 if self.__direction else -1
-                print(self.__step_number, self.__direction, self.__step_number % (10 if self.__pin_count == 5 else 4))
-
-                if self.__step_number == self.__number_of_steps:
-                    self.__step_number = 0
-                elif self.__step_number == 0:
-                    self.__step_number = self.__number_of_steps
+                
+                print(self.__step_number % (10 if self.__pin_count == 5 else 4))
 
                 steps_left -= 1
 
