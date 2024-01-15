@@ -44,17 +44,6 @@ class Stepper:
             [0, 0, 1, 0, 1]]
     }
 
-    __steps: list[int] = None
-
-    __direction: bool= False    # Direction of rotation
-    __step_number: int= 0       # Which step the motor is on
-    __last_step_time: int= 0    # Timestamp in us of when the last step was taken
-
-    __step_delay: int = 1       # Delay between steps, in us, based on speed
-    __number_of_steps:int       # Total number of steps this motor can take
-
-    __pins: list[Pin] = []
-
     def __init__(self, number_of_steps: int, pin1: int, pin2: int, pin3: int= None, pin4: int= None, pin5: int= None, steps: list[int] = None) -> None:
         """
         Initialize the Stepper object.
@@ -63,7 +52,14 @@ class Stepper:
         - number_of_steps: Total number of steps the motor can take
         - pin1 to pin5: GPIO pins connected to the stepper motor phases
         """
-        self.__number_of_steps = number_of_steps
+        self.__direction: int= 1                    # Direction of rotation
+        self.__step_number: int= 0                  # Which step the motor is on
+        self.__last_step_time: int= 0               # Timestamp in us of when the last step was taken
+        self.__step_delay: int = 1                  # Delay between steps, in us, based on speed
+
+        self.__number_of_steps = number_of_steps    # Total number of steps this motor can take
+
+        self.__pins: list[Pin] = []
         if pin1 and pin2:
             self.__pins += [Pin(pin1, Pin.OUT), Pin(pin2, Pin.OUT)]
 
@@ -94,8 +90,8 @@ class Stepper:
         - num_steps: Number of steps to move the motor (positive for forward, negative for backward).
         """
 
-        if num_steps < 0: self.__direction = False
-        else: self.__direction = True
+        if num_steps < 0: self.__direction = -1
+        else: self.__direction = 1
 
         steps_left: int = abs(num_steps)
 
@@ -105,12 +101,12 @@ class Stepper:
             if now - self.__last_step_time >= self.__step_delay:
                 self.__last_step_time = now
                 
-                if self.__step_number == self.__number_of_steps and self.__direction:
+                if self.__step_number == self.__number_of_steps and self.__direction == 1:
                     self.__step_number = 0
-                elif self.__step_number == 0 and not self.__direction:
+                elif self.__step_number == 0 and self.__direction == -1:
                     self.__step_number = self.__number_of_steps
 
-                self.__step_number += 1 if self.__direction else -1
+                self.__step_number += 1*self.__direction
 
                 steps_left -= 1
 
@@ -128,7 +124,7 @@ class Stepper:
         step = self.__steps[this_step]
         
         for i in range(len(step)):
-            self.__pins[i].value(step[i * (1 if self.__direction else -1)])
+            self.__pins[i].value(step[i * self.__direction])
 
 class Stepper28BYJ48(Stepper):
     """
