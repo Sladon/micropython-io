@@ -104,8 +104,6 @@ class Stepper:
 
             if now - self.__last_step_time >= self.__step_delay:
                 self.__last_step_time = now
-
-                # TODO: Fix direction
                 
                 if self.__step_number == self.__number_of_steps and self.__direction:
                     self.__step_number = 0
@@ -113,8 +111,6 @@ class Stepper:
                     self.__step_number = self.__number_of_steps
 
                 self.__step_number += 1 if self.__direction else -1
-                
-                #print(self.__step_number % (10 if self.__pin_count == 5 else 4))
 
                 steps_left -= 1
 
@@ -149,21 +145,36 @@ class Stepper28BYJ48(Stepper):
     - Pin4 (IN4) on the ULN2003 connects to the GPIO pin controlling the fourth phase of the stepper motor.
     - VCC on the ULN2003 connects to the power supply (usually +5V).
     - GND on the ULN2003 connects to the ground of the power supply.
-
-    Attributes (inherited from Stepper):
-    - __direction: Direction of rotation (True for forward, False for backward)
-    - __step_number: Current step the motor is on
-    - __last_step_time: Timestamp in microseconds of when the last step was taken
-    - __step_delay: Delay between steps in microseconds, based on motor speed
-    - __number_of_steps: Total number of steps the motor can take
-    - __motor_pin_1 to __motor_pin_5: Pins used for controlling the motor phases
-
-    Methods (inherited from Stepper):
-    - __init__: Constructor method to initialize the Stepper28BYJ48 object with motor parameters
-    - set_speed(value): Set the speed of the stepper motor
-    - step(num_steps): Move the stepper motor by a specified number of steps
-    - __step_motor(this_step): Control the stepper motor to take a step based on the current step number
     """
 
     def __init__(self, pin1: int, pin2: int, pin3: int, pin4: int, number_of_steps: int = 2048) -> None:
         Stepper.__init__(self, number_of_steps, pin1, pin2, pin3, pin4)
+
+class Stepper28BYJ48v2(Stepper):
+    """
+    Stepper28BYJ48 class extends the Stepper class to specifically control a 28BYJ-48 stepper motor using 
+    uln2003 driver board.
+
+    Connection between 28BYJ-48 Stepper Motor and ULN2003 Driver Board:
+    - Plug the stepper into the ULN2003
+
+    Connection between ESP-32 and ULN2003 Driver Board:
+    - Pin1 (IN1) on the ULN2003 connects to the GPIO pin controlling the first phase of the stepper motor.
+    - Pin2 (IN2) on the ULN2003 connects to the GPIO pin controlling the second phase of the stepper motor.
+    - Pin3 (IN3) on the ULN2003 connects to the GPIO pin controlling the third phase of the stepper motor.
+    - Pin4 (IN4) on the ULN2003 connects to the GPIO pin controlling the fourth phase of the stepper motor.
+    - VCC on the ULN2003 connects to the power supply (usually +5V).
+    - GND on the ULN2003 connects to the ground of the power supply.
+    """
+
+    def __init__(self, pin1: int, pin2: int, pin3: int, pin4: int, number_of_steps: int = 4096, steps: list[int]= [
+            [1, 1, 1, 0],
+            [1, 1, 0, 0],
+            [1, 1, 0, 1],
+            [1, 0, 0, 1],
+            [1, 0, 1, 1],
+            [0, 0, 1, 1],
+            [0, 1, 1, 1],
+            [0, 1, 1, 0]
+        ]) -> None:
+        Stepper.__init__(self, number_of_steps, pin1, pin2, pin3, pin4, steps=steps)
