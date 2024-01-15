@@ -231,7 +231,8 @@ class Stepper:
 
 class Stepper28BYJ48(Stepper):
     """
-    Stepper28BYJ48 class extends the Stepper class to specifically control a 28BYJ-48 stepper motor.
+    Stepper28BYJ48 class extends the Stepper class to specifically control a 28BYJ-48 stepper motor using 
+    uln2003 driver board.
 
     Attributes (inherited from Stepper):
     - __direction: Direction of rotation (True for forward, False for backward)
