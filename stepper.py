@@ -50,6 +50,8 @@ class Stepper:
     - mode(change): Gets or sets the stepping mode of the stepper motor.
     - step(num_steps): Moves the stepper motor by the specified number of steps.
     - reset(): Resets the stepper motor to its initial position.
+    - set_start(): Sets the current position as starting position
+    - position(): Returns the current position
 
     Private Methods:
     - __add_pin(pin): Adds a pin to the list of pins connected to the stepper motor.
@@ -273,8 +275,6 @@ class Stepper:
 
             sleep_us(delay)
 
-        self.__clean()
-
     def reset(self):
         """
         Resets the stepper motor to its initial position.
@@ -282,8 +282,31 @@ class Stepper:
         Example:
         >>> stepper.reset()
         """
-        # TODO: Return to initial position
+        steps_diff = self.__number_of_steps - self.__current_step
+        if self.__current_step < steps_diff:
+            steps = -self.__current_step
+        else:
+            steps = steps_diff
+        self.step(steps*(2 if self.__step_mode else 1))
         self.__clean()
+
+    def set_start(self) -> None:
+        """
+        Sets the current position as starting position
+        
+        Example:
+        >>> stepper.set_start()
+        """
+        self.__current_step = 0
+
+    def position(self, ) -> float:
+        """
+        Returns the current position
+        
+        Example:
+        >>> print(stepper.position())
+        """
+        return self.__current_step
 
     def __clean(self,):
         """
@@ -312,7 +335,8 @@ class Stepper:
 
 class Stepper28BYJ48(Stepper):
     """
-    A specialized subclass of the Stepper class for the 28BYJ-48 stepper motor.
+    A specialized subclass of the Stepper class for the 28BYJ-48 stepper motor using an ul2003
+    driver board.
 
     Attributes:
     - HALF_STEPS (list[list[int]]): Default half-step sequence for the 28BYJ-48 motor.
