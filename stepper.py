@@ -282,7 +282,7 @@ class Stepper:
         Example:
         >>> stepper.reset()
         """
-        self.__current_step = 0
+        # TODO: Return to initial position
         self.__clean()
 
     def __clean(self,):
