@@ -139,7 +139,7 @@ class Stepper:
                                   Defaults to 'us'.
 
         Returns:
-        - int: The current delay in microseconds after any adjustments.
+        - int: The current delay in the chosen method.
 
         Example:
         >>> stepper.delay(500, method='us')  # Set the delay to 500 microseconds
