@@ -169,12 +169,8 @@ class Stepper:
         Returns:
         - int: The adjusted delay, ensuring it meets the minimum requirements.
         """
-        if self.__step_mode:
-            min_delay = self.__min_f_us
-        else: min_delay = self.__min_h_us
-        if delay < min_delay:
-            return min_delay
-        return int(delay)
+        min_delay = self.__min_f_us if self.__step_mode else self.__min_h_us * 2
+        return min_delay if delay < min_delay else int(delay)
 
     def __us(self, delay: float = None) -> int:
         """
@@ -284,7 +280,7 @@ class Stepper:
         Resets the stepper motor to its initial position.
 
         Example:
-        >>> stepper.reset()  # Reset the motor to the starting position
+        >>> stepper.reset()
         """
         self.__current_step = 0
         self.__clean()
