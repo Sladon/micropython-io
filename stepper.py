@@ -5,15 +5,20 @@ MICRO_TO_SECOND: int = 1e6
 
 class DriverA4988:
     
-    STEPS = 256
+    STEPS = 200
 
     STEP_MODES = {
         "full": {"states": [0, 0, 0], "multiplier": 1},
-        "half": {"states": [1, 0, 0], "multiplier": 2},
+        "1/2":  {"states": [1, 0, 0], "multiplier": 2},
         "1/4":  {"states": [0, 1, 0], "multiplier": 4},
         "1/8":  {"states": [1, 1, 0], "multiplier": 8},
         "1/16": {"states": [1, 1, 1], "multiplier": 16}
+    }
 
+    MESSAGES = {
+        "enable": {0: "FET outputs enabled", 1: "FET outputs disabled"},
+        "sleep": {0: "Sleeping", 1: "Awake"},
+        "reset": {0: "Can't get input", 1: "Waiting inputs"}
     }
 
     def __init__(
@@ -21,8 +26,11 @@ class DriverA4988:
             ms2: int or Pin = None, ms3: int or Pin = None, sleep: int or Pin = None, reset: int or Pin = None,
                 ):
         
-        self.current_mode = "full"
+        self.__mode = "full"
         self.position = 0
+        self.away_from_origin = 0
+        self.__rpm = 0
+        self.__delay = 0
 
         self.dir_pin = self.__pin(direction)
         self.step_pin = self.__pin(step)
@@ -57,23 +65,19 @@ class DriverA4988:
     def step(self):
         self.step_pin.value(not self.step_pin.value())
         self.step_pin.value(not self.step_pin.value())
+
+    def __toggle_state(self, tg_pin: Pin, tg_msg: str, toggle: bool, get_str: bool):
+        if toggle: tg_pin.value(not tg_pin.value())
+        return tg_pin.value() if not get_str else tg_msg[tg_pin.value()]
         
-    def enable(self, state: bool or int = None, get_str:bool = False):
-        if state is not None: self.enable_pin.value(state)
-        str_result = "FET outputs disabled" if self.enable_pin.value() else "FET outputs enabled"
-        return self.enable_pin.value() if not get_str else str_result
+    def enable(self, toggle: bool = False, get_str:bool = False):
+        return self.__toggle_state(self.enable_pin, self.MESSAGES["enable"], toggle, get_str)
     
-    def sleep(self, state: bool or int = None, get_str:bool = False):
-        if state is not None:
-            self.sleep_pin.value(state)
-            if self.sleep_pin.value(): sleep_ms(1)
-        str_result = "AWAKE" if self.sleep_pin.value() else "SLEEP"
-        return self.sleep_pin.value() if not get_str else str_result
+    def sleep(self, toggle: bool = False, get_str:bool = False):
+        return self.__toggle_state(self.sleep_pin, self.MESSAGES["sleep"], toggle, get_str)
     
-    def reset(self, state: bool or int = None, get_str:bool = False):
-        if state is not None: self.reset_pin.value(state)
-        str_result = "Waiting input" if self.reset_pin.value() else "No input"
-        return self.reset_pin.value() if not get_str else str_result
+    def reset(self, toggle: bool = False, get_str:bool = False):
+        return self.__toggle_state(self.reset_pin, self.MESSAGES["reset"], toggle, get_str)
     
     def mode(self, mode: str = None):
         if mode is not None:
@@ -81,12 +85,18 @@ class DriverA4988:
             self.ms1_pin.value(ms1)
             self.ms2_pin.value(ms2)
             self.ms3_pin.value(ms3)
-            self.current_mode = mode
-        return self.current_mode
+            self.__mode = mode
+        return self.__mode
     
-    def delay(self, delay: int)
+    def rpm(self, tg_rpm: float=None):
+        if tg_rpm is not None: self.__rpm = tg_rpm
+        return self.__rpm
+    
+    def delay(self, ):
+        return int(60*MICRO_TO_SECOND / (self.STEPS * self.STEP_MODES[self.__mode]["multiplier"] * self.__rpm))
         
-    def rotate(self, steps, delay, direction):
+    def rotate(self, steps, direction):
+        delay = self.delay()
         for _ in range(steps):
             self.step()
             sleep_us(delay)
