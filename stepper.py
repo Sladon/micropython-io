@@ -1,5 +1,5 @@
 from machine import Pin
-from utime import sleep_us, sleep_ms
+from utime import sleep_ms, ticks_us, sleep_us
 
 MICRO_TO_SECOND: int = 1e6
 
@@ -15,38 +15,36 @@ class DriverA4988:
         "1/16": {"states": [1, 1, 1], "multiplier": 16}
     }
 
-    MESSAGES = {
-        "enable": {0: "FET outputs enabled", 1: "FET outputs disabled"},
-        "sleep": {0: "Sleeping", 1: "Awake"},
-        "reset": {0: "Can't get input", 1: "Waiting inputs"}
-    }
-
     def __init__(
             self, direction: int or Pin, step: int or Pin, enable: int or Pin = None, ms1: int or Pin = None,
             ms2: int or Pin = None, ms3: int or Pin = None, sleep: int or Pin = None, reset: int or Pin = None,
                 ):
         
         self.__mode = "full"
-        self.position = 0
-        self.away_from_origin = 0
+        self.position = 0.0
         self.__rpm = 0
-        self.__delay = 0
 
         self.dir_pin = self.__pin(direction)
         self.step_pin = self.__pin(step)
 
         #* The following pins are not required to be connected to use the stepper motor
-        self.enable_pin = self.__pin(enable) if enable else None #* If used, when LOW all FET outputs are enabled, off when HIGH
+        self.enable_pin = self.__pin(enable) if enable else None # If used, when LOW all FET outputs are enabled, off when HIGH
 
-        self.step_control = ms1 and ms2 and ms3
-        if self.step_control:
+        self.__step_control = ms1 and ms2 and ms3
+        if self.__step_control:
             self.ms1_pin = self.__pin(ms1)
             self.ms2_pin = self.__pin(ms2)
             self.ms3_pin = self.__pin(ms3)
 
         #* If not needed, connect sleep with reset to enable the driver
-        self.sleep_pin = self.__pin(sleep) if sleep else None #* If used, when LOW sleep mode enabled
-        self.reset_pin = self.__pin(reset) if reset else None #* All step inputs are ignored if LOW
+        self.sleep_pin = self.__pin(sleep) if sleep else None # If used, when LOW sleep mode enabled
+        self.reset_pin = self.__pin(reset) if reset else None # All step inputs are ignored if LOW
+        
+        self.sleep()
+        self.reset()
+        self.step_pin.value(0)
+        self.dir_pin.value(1)
+        self.enable()
 
     def __pin(self, pin):
         """
@@ -63,21 +61,41 @@ class DriverA4988:
         else: raise TypeError("pin value must be of type 'int' or 'Pin'")
         
     def step(self):
-        self.step_pin.value(not self.step_pin.value())
-        self.step_pin.value(not self.step_pin.value())
-
-    def __toggle_state(self, tg_pin: Pin, tg_msg: str, toggle: bool, get_str: bool):
-        if toggle: tg_pin.value(not tg_pin.value())
-        return tg_pin.value() if not get_str else tg_msg[tg_pin.value()]
+        delay = self.delay()
+        prev_time_us = ticks_us()
+        times = 2
+        self.step_pin.value(0)
+        while True:
+            current_time_us = ticks_us()
+            if current_time_us - prev_time_us > delay:
+                self.step_pin.value(1)
+                prev_time_us = ticks_us()
+                break
         
-    def enable(self, toggle: bool = False, get_str:bool = False):
-        return self.__toggle_state(self.enable_pin, self.MESSAGES["enable"], toggle, get_str)
+    def enable(self):
+        if self.enable_pin is None: return "Pin not configured"
+        if self.enable_pin.value(): self.enable_pin.value(0)
     
-    def sleep(self, toggle: bool = False, get_str:bool = False):
-        return self.__toggle_state(self.sleep_pin, self.MESSAGES["sleep"], toggle, get_str)
+    def disable(self):
+        if self.enable_pin is None: return "Pin not configured"
+        if not self.enable_pin.value(): self.enable_pin.value(1)
     
-    def reset(self, toggle: bool = False, get_str:bool = False):
-        return self.__toggle_state(self.reset_pin, self.MESSAGES["reset"], toggle, get_str)
+    def sleep(self):
+        if self.sleep_pin is None: return "Pin not configured"
+        if self.sleep_pin.value(): self.sleep_pin.value(0)
+    
+    def awake(self):
+        if self.sleep_pin is None: return "Pin not configured"
+        if not self.sleep_pin.value():
+            sleep_ms(1)
+            self.sleep_pin.value(1)
+    
+    def reset(self):
+        if self.reset_pin is None: return "Pin not configured"
+        self.reset_pin.value(0)
+        self.reset_pin.value(1)
+        self.position = 0
+        
     
     def mode(self, mode: str = None):
         if mode is not None:
@@ -95,8 +113,12 @@ class DriverA4988:
     def delay(self, ):
         return int(60*MICRO_TO_SECOND / (self.STEPS * self.STEP_MODES[self.__mode]["multiplier"] * self.__rpm))
         
-    def rotate(self, steps, direction):
-        delay = self.delay()
+    def rotate(self, steps, direction, force_mode: str = None):
+        self.dir_pin.value(direction)
+        orientation = 1 if direction else -1
+        self.position += (1 / self.STEP_MODES[self.__mode]["multiplier"]) * steps * orientation
+        
+        self.awake()
         for _ in range(steps):
             self.step()
-            sleep_us(delay)
+        self.sleep()
