@@ -139,7 +139,7 @@ class DriverTB6600(DriverDefault):
 
     MICROSTEPS = [2**x for x in range(6)]
 
-    def __init__(self, step: int or Pin, direction: int or Pin, enable: int or Pin = None, mode: str="full"):
+    def __init__(self, step: int or Pin, direction: int or Pin, enable: int or Pin = None):
         super().__init__(step, direction, enable)
 
     def microsteps(self, microsteps: int = None):
