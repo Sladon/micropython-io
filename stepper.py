@@ -148,5 +148,3 @@ class DriverTB6600(DriverDefault):
         return self.__microsteps
 
     # TODO: FIX Enable/Disable, probably hardware related
-
-motor = Driver2A4988(15,2,27,26,25,14,4,23)
